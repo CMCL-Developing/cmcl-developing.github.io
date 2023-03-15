@@ -52,6 +52,3 @@ span.label::before{
 .col-red {
     color:orangered;
 }
-nav>div>a:hover{
-    font-weight:bold;
-}
