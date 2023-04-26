@@ -1,0 +1,389 @@
+<!doctype html>
+<html>
+
+<head>
+	<title>KMP</title>
+	<style id="square-size"></style>
+	<style id="animation-class"></style>
+	<style>
+		* {
+			font-family: Consolas, "楷体";
+		}
+
+		.color-azure {
+			background: azure;
+		}
+
+		.color-aqua {
+			background: aqua;
+		}
+
+		.color-aquamarine {
+			background: aquamarine;
+		}
+
+		.color-cadetblue {
+			background: cadetblue;
+		}
+
+		@keyframes background-first {
+			from {
+				background-color: aqua
+			}
+
+			to {
+				background-color: aquamarine
+			}
+		}
+
+		@keyframes move {
+			from {
+				width: 0
+			}
+
+			to {
+				width: var(--square);
+			}
+		}
+
+		label {
+			display: inline-block;
+			width: 10em;
+		}
+
+		button {
+			width: 20em;
+			height: 5em;
+			border-radius: 1em;
+		}
+
+		div.element {
+			display: inline-grid;
+			padding: 0;
+			margin: 0;
+			width: var(--square);
+			height: var(--square);
+			/*line-height: var(--square);*/
+			text-align: center;
+			font-size: calc(var(--square) / 3);
+			border: 1px solid black;
+			align-items: center;
+			transition: all 0.1s linear 0.1s;
+		}
+
+		div#pattern-display {
+			height: var(--square);
+			align-items: flex-start;
+			display: flex;
+		}
+
+		div.element-pattern {
+			background: orange;
+		}
+
+		div.element-text {
+			background: aqua;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="form">
+		<div><label for="size-element">size: </label><input type="number" id="size-element" value="200">px<br /></div>
+		<label for="interval">Interval: </label><input type="number" id="interval" value="500"><br />
+		<label for="pattern">Pattern: </label><input type="text" id="pattern"><br />
+		<label for="text">Text: </label><input type="text" id="text"><br />
+		<button id="run-animation-nxm" class="color-azure">Run O(n * m)</button>
+		<button id="run-animation-nxm-optimize" class="color-aqua">Run O(n * m) - Optimized</button>
+		<button id="run-animation-next" class="color-cadetblue">Prefix function for pattern</button>
+		<button id="run-animation-npm" class="color-aquamarine">Run KMP - O(n + m)</button>
+		<button id="pause-button" onclick="debugger;">Pause</button>
+		<button id="restart-button">End</button>
+	</div>
+	<br />
+	<div id="animation">
+		<div id="text-display">
+		</div>
+		<div id="pattern-display">
+		</div>
+	</div>
+	<script>
+		let patterns = [], texts = [];
+		let pattern_display = document.querySelector("div#pattern-display");
+		let text_display = document.querySelector("div#text-display");
+		let interval_tag = document.querySelector("input#interval");
+		let INTERVAL = -1;
+		function SquareSize() {
+			document.querySelector("style#square-size").innerText = `
+					*{
+						--square: ${this.value}px;
+					}
+			`;
+		};
+		let SIZEELEMENT = document.querySelector("#size-element");
+		SquareSize.call(SIZEELEMENT);
+		SIZEELEMENT.onchange = SquareSize;
+		function sleep(interval) {
+			return new Promise((resolve, reject) => {
+				INTERVAL = setTimeout(resolve, interval);
+			});
+		}
+		function AnimateClass() {
+			console.log(this.value)
+			document.querySelector("style#animation-class").innerHTML = `
+			div#pattern-display{
+				transition:all ease ${this.value / 1000}s
+			}`;
+		};
+		interval_tag.onchange = AnimateClass;
+		AnimateClass.call(interval_tag);
+		document.querySelector("button#restart-button").onclick = function () {
+			clearInterval(INTERVAL);
+			console.groupEnd();
+			console.groupEnd();
+		};
+		async function Progressive(obj, max, unit) {
+			return new Promise((resolve, reject) => {
+				let cnt = 0;
+				let interval = setInterval(function () {
+					if (cnt >= max) { resolve(clearInterval(interval)); return; }
+					++cnt;
+					obj.style.width = `${cnt}${unit}`;
+				}, 10);
+			})
+		}
+
+
+		async function collectPadding(Node, cnt, firstChild) {
+			// let div = document.createElement("div");
+			// div.className = "element";
+			// div.style.border = "none";
+			// div.style.animation = `move ${interval_tag.value / 1000}s linear forwards`;
+			// div.style.animationTimingFunction = "ease";
+			// div.innerHTML = "&nbsp;";
+			// Node.insertAdjacentElement("afterBegin", div);
+			Node.style.marginLeft = `calc(var(--square) * ${cnt})`;
+			await sleep(interval_tag.value);
+		}
+
+
+		function initialzation(tag) {
+			tag = tag || "";
+			let pattern_input = document.querySelector("input#pattern").value;
+			let text_input = document.querySelector("input#text").value;
+			pattern_display.innerHTML = '';
+			text_display.innerHTML = '';
+			collectPadding(pattern_display, 0);
+			patterns = [], texts = [];
+			for (let i in pattern_input) {
+				let pattern = document.createElement("div");
+				pattern.className = "element element-pattern";
+				pattern.innerHTML = pattern_input[i].replaceAll(" ", "[ ]") + tag.replaceAll("${next}", 0);
+				pattern_display.appendChild(pattern);
+				patterns.push(pattern);
+			}
+			for (let i in text_input) {
+				let text = document.createElement("div");
+				text.className = "element element-text";
+				text.innerHTML = text_input[i].replaceAll(" ", "[ ]");
+				text_display.appendChild(text);
+				texts.push(text);
+			}
+			return [pattern_input, text_input];
+		}
+
+
+		document.querySelector("button#run-animation-nxm").onclick = async function () {
+			let [pattern_input, text_input] = initialzation();
+			console.group("n * m Algorithm (Raw)");
+			console.log("Started");
+			for (let i = 0; i < text_input.length - pattern_input.length + 1; ++i) {
+				console.group(`i = ${i}`);
+				let flag = false;
+				for (let j = 0; j < pattern_input.length; ++j) {
+					patterns[j].style.color = "red";
+					texts[i + j].style.color = "red";
+					await sleep(interval_tag.value);
+					if (pattern_input[j] != text_input[i + j]) {
+						flag = false;
+						console.warn(`Unmatched:\t i: ${i}\t j: ${j}`);
+					}
+					texts[i + j].style.animation = `background-first ${interval_tag.value / 1000}s linear forwards`;
+					texts[i + j].style.color = "black";
+					patterns[j].style.color = "black";
+				}
+				if (flag) {
+					console.log(`Matched:\t i: ${i}`);
+				}
+				console.groupEnd(`i = ${i}`);
+				await sleep(interval_tag.value);
+				if (i != text_input.length - pattern_input.length) await collectPadding(pattern_display, i + 1, patterns[0]);
+			}
+			console.log("Ended");
+			console.groupEnd()
+		}
+
+
+
+
+		document.querySelector("button#run-animation-nxm-optimize").onclick = async function () {
+			let [pattern_input, text_input] = initialzation();
+			console.group("n * m Algorithm (Optimized)");
+			console.log("Started");
+			for (let i = 0; i < text_input.length - pattern_input.length + 1; ++i) {
+				console.group(`i = ${i}`);
+				let flag = true;
+				for (let j = 0; j < pattern_input.length; ++j) {
+					patterns[j].style.color = "red";
+					texts[i + j].style.color = "red";
+					await sleep(interval_tag.value);
+					texts[i + j].style.color = "black";
+					texts[i + j].style.animation = `background-first ${interval_tag.value / 1000}s linear forwards`;
+					patterns[j].style.color = "black";
+					if (pattern_input[j] != text_input[i + j]) {
+						flag = false;
+						console.warn(`Unmatched:\t i: ${i}\t j: ${j}`);
+						break;
+					}
+				}
+				if (flag) {
+					console.log(`Matched:\t i: ${i}`);
+				}
+				console.groupEnd(`i = ${i}`);
+				await sleep(interval_tag.value);
+				if (i != text_input.length - pattern_input.length) await collectPadding(pattern_display, i + 1, patterns[0]);
+			}
+			console.log("Ended");
+			console.groupEnd()
+		}
+
+
+		document.querySelector("button#run-animation-next").onclick = async function () {
+			let [pattern_input, text_input] = initialzation();
+			patterns = [...patterns];
+			texts = [...texts];
+			console.group("Counting next[i]");
+			console.log("Started");
+			let T = text_input;
+			let P = pattern_input;
+			let length = pattern_input.length;
+			let f = [0, 0];
+			do {
+				patterns[0].innerHTML += `<br />${f[0]}`;
+				patterns[1].innerHTML += `<br />${f[1]}`;
+				await sleep(interval_tag.value / 2);
+				patterns[0].style.background = "transparent";
+				patterns[1].style.background = "transparent";
+				await sleep(interval_tag.value / 2);
+				patterns[0].style.background = "";
+				patterns[1].style.background = "";
+				for (let i = 1; i < length; ++i) {
+					if (patterns[i + 1]) {
+						patterns[i + 1].style.color = "red";
+						await sleep(interval_tag.value / 2);
+						patterns[i + 1].style.color = "black";
+						await sleep(interval_tag.value / 2);
+					}
+					let j = f[i], flag = true;
+					while (j && P[i] != P[j]) {
+						for (let k = i - j, L = 0; L < j; ++k, ++L)
+							patterns[k].style.color = "aquamarine";
+						for (let k = 0; k < j; ++k)
+							patterns[k].style.color = "aqua";
+						await sleep(interval_tag.value);
+						for (let k = i - j, L = 0; L < j; ++k, ++L)
+							patterns[k].style.color = "black";
+						for (let k = 0; k < j; ++k)
+							patterns[k].style.color = "black";
+						j = f[j];
+						flag = false;
+					}
+					if (flag) {
+						for (let k = i - j, L = 0; L < j; ++k, ++L)
+							patterns[k].style.color = "green";
+						for (let k = 0; k < j; ++k)
+							patterns[k].style.color = "greenyellow";
+						await sleep(interval_tag.value);
+						for (let k = i - j, L = 0; L < j; ++k, ++L)
+							patterns[k].style.color = "black";
+						for (let k = 0; k < j; ++k)
+							patterns[k].style.color = "black";
+					}
+
+					f[i + 1] = (P[i] == P[j]) ? (j + 1) : (0);
+					await sleep(interval_tag.value * 2);
+					if (patterns[i + 1]) {
+						let _source = patterns[i + 1].innerHTML;
+						if (P[i] != P[j]) patterns[i + 1].innerHTML = _source + `<br />0`;
+						else patterns[i + 1].innerHTML = _source + `<br />${f[i + 1]}`;
+					}
+
+				}
+			} while (0);
+			console.log("Ended");
+			console.groupEnd()
+		}
+
+		document.querySelector("button#run-animation-npm").onclick = async function () {
+			let [pattern_input, text_input] = initialzation();
+			patterns = [...patterns];
+			texts = [...texts];
+			console.group("KMP Raw Algorithm");
+			console.log("Started");
+			let T = text_input;
+			let P = pattern_input;
+			let length = pattern_input.length;
+			let f = [0, 0];
+			do {
+				patterns[0].innerHTML += `<br />${f[0]}`;
+				patterns[1].innerHTML += `<br />${f[1]}`;
+				for (let i = 1; i < length; ++i) {
+					let j = f[i];
+					while (j && P[i] != P[j]) j = f[j], patterns[j].style.color = "aqua", await sleep(interval_tag.value / 8), patterns[j].style.color = "black";
+					f[i + 1] = (P[i] == P[j]) ? (j + 1) : (0);
+					if (patterns[i + 1])
+						patterns[i + 1].innerHTML += `<br />${f[i + 1]}`;
+				}
+			} while (0);
+			console.log("next: ", f)
+			do {
+				let n = T.length, m = P.length;
+				let j = 0;
+				let k = 0;
+				for (let i = 0; i < n; ++i) {
+					await collectPadding(pattern_display, i - j, patterns[0]);
+					texts[i].style.color = "red";
+					while (j && P[j] != T[i]) {
+						j = f[j];
+						if (patterns[j]) patterns[j].style.color = "green";
+						await sleep(interval_tag.value / 4);
+						if (patterns[j]) patterns[j].style.color = "black";
+						await collectPadding(pattern_display, i - j, patterns[0]);
+					}
+
+					texts[i].style.color = "black";
+					patterns[j].style.color = "red";
+					texts[i].style.color = "red";//i - m + 1
+					await sleep(interval_tag.value);
+					patterns[j].style.color = "black";
+					texts[i].style.color = "black";
+					texts[i].style.animation = `background-first ${interval_tag.value / 1000}s linear forwards`;
+					await sleep(interval_tag.value);
+					if (P[j] == T[i]) ++j;
+					if (j == m) {
+						console.log("Location: %d", i - m + 1);
+					}
+				}
+			} while (0);
+			console.log("Ended");
+			console.groupEnd()
+		}
+
+	</script>
+</body>
+
+</html>
