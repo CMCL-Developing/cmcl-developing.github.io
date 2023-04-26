@@ -6,21 +6,13 @@
 html {
     background-image: url(background.png);
 }
+
 body{
     width: 100vw;
     height: 100vh;
 }
-h1 {
-    width: 100vw;
-    height: 100vh;
-    text-align: center;
-    line-height: 100vh;
-    -webkit-text-stroke: 2px red;
-    text-stroke: 2px red;
-    font-size: 4em;
-    font-family: Georgia, 'Times New Roman', Times, serif;
-    user-select: none;
-}
+
+
 nav{
     position: absolute;
     width: 100%;
@@ -55,5 +47,4 @@ span.label::before{
 nav>div>a:hover{
     font-weight: bold;
 	text-decoration: underline;
-	
 }

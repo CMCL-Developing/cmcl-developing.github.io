@@ -1,0 +1,13 @@
+h1 {
+    display: grid;
+    width: 100vw;
+    height: 100vh;
+    text-align: center;
+    flex-wrap: wrap;
+    align-content: center;
+    -webkit-text-stroke: 2px red;
+    text-stroke: 2px red;
+    font-size: 4em;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    user-select: none;
+}
