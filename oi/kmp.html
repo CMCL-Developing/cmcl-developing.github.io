@@ -52,7 +52,7 @@
 		}
 
 		button {
-			width: 20em;
+			width: 18em;
 			height: 5em;
 			border-radius: 1em;
 		}
@@ -101,7 +101,8 @@
 		<button id="run-animation-nxm-optimize" class="color-aqua">Run O(n * m) - Optimized</button>
 		<button id="run-animation-next" class="color-cadetblue">Prefix function for pattern</button>
 		<button id="run-animation-npm" class="color-aquamarine">Run KMP - O(n + m)</button>
-		<button id="pause-button" onclick="debugger;">Pause</button>
+		<button id="pause-button" onclick="debugger;">Debugger</button>
+		<button id="pause-button" onclick="PAUSED = !PAUSED;if(global_resolve && !PAUSED) global_resolve();">Pause</button>
 		<button id="restart-button">End</button>
 	</div>
 	<br />
@@ -112,6 +113,7 @@
 		</div>
 	</div>
 	<script>
+		PAUSED = 0;
 		let patterns = [], texts = [];
 		let pattern_display = document.querySelector("div#pattern-display");
 		let text_display = document.querySelector("div#text-display");
@@ -129,7 +131,10 @@
 		SIZEELEMENT.onchange = SquareSize;
 		function sleep(interval) {
 			return new Promise((resolve, reject) => {
-				INTERVAL = setTimeout(resolve, interval);
+				INTERVAL = setTimeout(function() {
+					global_resolve = resolve;
+					if(!PAUSED) resolve();
+				}, interval);
 			});
 		}
 		function AnimateClass() {
@@ -186,6 +191,14 @@
 				pattern_display.appendChild(pattern);
 				patterns.push(pattern);
 			}
+			do{
+				let pattern = document.createElement("div");
+				pattern.className = "element element-pattern";
+				pattern.style.background = "transparent";
+				pattern.innerHTML = "&lt;pad&gt;";
+				pattern_display.appendChild(pattern);
+				patterns.push(pattern);
+			}while(0);
 			for (let i in text_input) {
 				let text = document.createElement("div");
 				text.className = "element element-text";
